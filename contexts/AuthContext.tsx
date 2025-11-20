@@ -32,23 +32,118 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      setLoading(false)
-    })
+    let refreshInterval: NodeJS.Timeout | null = null
+
+    // Get initial session and check if it needs refresh
+    const initializeSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession()
+        
+        if (error) {
+          console.error("Error getting session:", error)
+          setSession(null)
+          setUser(null)
+          setLoading(false)
+          return
+        }
+
+        if (session) {
+          setSession(session)
+          setUser(session.user)
+          
+          // Check if session is expired or about to expire (within 5 minutes)
+          const expiresAt = session.expires_at
+          if (expiresAt) {
+            const expiresIn = expiresAt - Math.floor(Date.now() / 1000)
+            
+            // If session expires in less than 5 minutes, refresh it
+            if (expiresIn < 300) {
+              console.log("Session expiring soon, refreshing...")
+              const { data: { session: refreshedSession }, error: refreshError } = 
+                await supabase.auth.refreshSession()
+              
+              if (!refreshError && refreshedSession) {
+                setSession(refreshedSession)
+                setUser(refreshedSession.user)
+              }
+            }
+          }
+        } else {
+          setSession(null)
+          setUser(null)
+        }
+      } catch (err) {
+        console.error("Error initializing session:", err)
+        setSession(null)
+        setUser(null)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    initializeSession()
 
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("Auth state changed:", event, session?.user?.email)
+      
+      // Handle token refresh
+      if (event === "TOKEN_REFRESHED" && session) {
+        setSession(session)
+        setUser(session.user)
+        return
+      }
+
+      // Handle signed out
+      if (event === "SIGNED_OUT") {
+        setSession(null)
+        setUser(null)
+        if (refreshInterval) {
+          clearInterval(refreshInterval)
+          refreshInterval = null
+        }
+        return
+      }
+
       setSession(session)
       setUser(session?.user ?? null)
       setLoading(false)
     })
 
-    return () => subscription.unsubscribe()
+    // Set up periodic session refresh (every 10 minutes)
+    refreshInterval = setInterval(async () => {
+      try {
+        const { data: { session: currentSession } } = await supabase.auth.getSession()
+        if (currentSession) {
+          const expiresAt = currentSession.expires_at
+          if (expiresAt) {
+            const expiresIn = expiresAt - Math.floor(Date.now() / 1000)
+            // Refresh if expires in less than 10 minutes
+            if (expiresIn < 600) {
+              console.log("Refreshing session proactively...")
+              const { data: { session: refreshedSession }, error } = 
+                await supabase.auth.refreshSession()
+              
+              if (!error && refreshedSession) {
+                setSession(refreshedSession)
+                setUser(refreshedSession.user)
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Error refreshing session:", err)
+      }
+    }, 10 * 60 * 1000) // Check every 10 minutes
+
+    return () => {
+      subscription.unsubscribe()
+      if (refreshInterval) {
+        clearInterval(refreshInterval)
+      }
+    }
   }, [])
 
   const signUp = async (email: string, password: string) => {

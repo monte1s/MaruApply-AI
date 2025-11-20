@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js"
+import { chromeStorageAdapter } from "./chrome-storage"
 
 // These should be set as environment variables in production
 // For now, you'll need to replace these with your Supabase project credentials
@@ -11,5 +12,12 @@ if (!supabaseUrl || !supabaseAnonKey) {
   )
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    storage: chromeStorageAdapter,
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: false,
+  },
+})
 

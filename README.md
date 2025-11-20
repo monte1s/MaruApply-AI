@@ -14,9 +14,16 @@ This is a [Plasmo extension](https://docs.plasmo.com/) project bootstrapped with
 ```env
 PLASMO_PUBLIC_SUPABASE_URL=your-supabase-project-url
 PLASMO_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+PLASMO_PUBLIC_OPENAI_API_KEY=your-openai-api-key
 ```
 
-### 2. Set up Google OAuth (Optional)
+### 2. Set up OpenAI API (Required for Resume Analysis)
+
+1. Get your OpenAI API key from [platform.openai.com](https://platform.openai.com/api-keys)
+2. Add it to your `.env` file as `PLASMO_PUBLIC_OPENAI_API_KEY`
+3. The Profile page uses OpenAI to analyze resumes and extract personal information
+
+### 3. Set up Google OAuth (Optional)
 
 To enable Google sign-in:
 
@@ -27,7 +34,7 @@ To enable Google sign-in:
 5. Add redirect URL: Get your extension's redirect URL by running the extension and checking `chrome.identity.getRedirectURL()` in the console, or use: `https://[your-extension-id].chromiumapp.org/`
 6. Add the same redirect URL to your Google Cloud Console OAuth 2.0 Client credentials
 
-### 3. Run the development server
+### 4. Run the development server
 
 First, run the development server:
 
