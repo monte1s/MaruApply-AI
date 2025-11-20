@@ -1,71 +1,33 @@
-# MaruApply AI Chrome Extension
+This is a [Plasmo extension](https://docs.plasmo.com/) project bootstrapped with [`plasmo init`](https://www.npmjs.com/package/plasmo).
 
-A simple Chrome extension built with React.
+## Getting Started
 
-## Features
+First, run the development server:
 
-- Modern React-based popup interface
-- Content script integration
-- Background service worker
-- Beautiful gradient UI
-
-## Development
-
-### Prerequisites
-
-- Node.js (v14 or higher)
-- npm or yarn
-
-### Installation
-
-1. Install dependencies:
 ```bash
-npm install
-```
-
-2. Build the extension:
-```bash
-npm run build
-```
-
-3. For development with watch mode:
-```bash
+pnpm dev
+# or
 npm run dev
 ```
 
-### Loading the Extension in Chrome
+Open your browser and load the appropriate development build. For example, if you are developing for the chrome browser, using manifest v3, use: `build/chrome-mv3-dev`.
 
-1. Open Chrome and navigate to `chrome://extensions/`
-2. Enable "Developer mode" (toggle in the top right)
-3. Click "Load unpacked"
-4. Select the `dist` folder from this project
-5. The extension icon should appear in your Chrome toolbar
+You can start editing the popup by modifying `popup.tsx`. It should auto-update as you make changes. To add an options page, simply add a `options.tsx` file to the root of the project, with a react component default exported. Likewise to add a content page, add a `content.ts` file to the root of the project, importing some module and do some logic, then reload the extension on your browser.
 
-## Project Structure
+For further guidance, [visit our Documentation](https://docs.plasmo.com/)
 
-```
-├── src/
-│   ├── popup/          # React popup component
-│   │   ├── App.jsx
-│   │   ├── index.jsx
-│   │   ├── popup.html
-│   │   └── styles.css
-│   ├── background/     # Background service worker
-│   │   └── background.js
-│   └── content/        # Content script
-│       └── content.js
-├── manifest.json       # Chrome extension manifest
-├── webpack.config.js   # Webpack configuration
-└── package.json
+## Making production build
+
+Run the following:
+
+```bash
+pnpm build
+# or
+npm run build
 ```
 
-## Building
+This should create a production bundle for your extension, ready to be zipped and published to the stores.
 
-The extension files are built into the `dist` directory. After building, load the `dist` folder as an unpacked extension in Chrome.
+## Submit to the webstores
 
-## Notes
-
-- The extension requires the `activeTab` permission to interact with web pages
-- Icons are referenced in the manifest but need to be added to the `icons` folder
-- Make sure to rebuild after making changes to the source files
-
+The easiest way to deploy your Plasmo extension is to use the built-in [bpp](https://bpp.browser.market) GitHub action. Prior to using this action however, make sure to build your extension and upload the first version to the store to establish the basic credentials. Then, simply follow [this setup instruction](https://docs.plasmo.com/framework/workflows/submit) and you should be on your way for automated submission!
