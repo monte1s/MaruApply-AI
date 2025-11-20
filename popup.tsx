@@ -1,13 +1,16 @@
 import { useState } from "react"
+import { AuthProvider, useAuth } from "./contexts/AuthContext"
 import Home from "./components/pages/Home"
 import Settings from "./components/pages/Settings"
 import Account from "./components/pages/Account"
+import Login from "./components/auth/Login"
 import "./style.css"
 
 type TabType = "home" | "settings" | "account"
 
-function IndexPopup() {
+function IndexPopupContent() {
   const [activeTab, setActiveTab] = useState<TabType>("home")
+  const { user, loading } = useAuth()
 
   const renderContent = () => {
     switch (activeTab) {
@@ -20,6 +23,26 @@ function IndexPopup() {
       default:
         return <Home />
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="extension-container">
+        <div className="content-area" style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+          <p>Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return (
+      <div className="extension-container">
+        <div className="content-area auth-page">
+          <Login />
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -92,6 +115,14 @@ function IndexPopup() {
         </button>
       </footer>
     </div>
+  )
+}
+
+function IndexPopup() {
+  return (
+    <AuthProvider>
+      <IndexPopupContent />
+    </AuthProvider>
   )
 }
 

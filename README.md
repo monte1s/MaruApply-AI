@@ -2,6 +2,33 @@ This is a [Plasmo extension](https://docs.plasmo.com/) project bootstrapped with
 
 ## Getting Started
 
+### 1. Set up Supabase Authentication
+
+1. Create a Supabase account at [supabase.com](https://supabase.com)
+2. Create a new project
+3. Go to Project Settings > API
+4. Copy your Project URL and anon/public key
+5. Create a `.env` file in the root directory (copy from `.env.example`)
+6. Add your Supabase credentials:
+
+```env
+PLASMO_PUBLIC_SUPABASE_URL=your-supabase-project-url
+PLASMO_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+```
+
+### 2. Set up Google OAuth (Optional)
+
+To enable Google sign-in:
+
+1. Go to your Supabase project dashboard
+2. Navigate to Authentication > Providers
+3. Enable Google provider
+4. Add your Google OAuth credentials (Client ID and Client Secret)
+5. Add redirect URL: Get your extension's redirect URL by running the extension and checking `chrome.identity.getRedirectURL()` in the console, or use: `https://[your-extension-id].chromiumapp.org/`
+6. Add the same redirect URL to your Google Cloud Console OAuth 2.0 Client credentials
+
+### 3. Run the development server
+
 First, run the development server:
 
 ```bash

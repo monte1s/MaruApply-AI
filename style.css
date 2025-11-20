@@ -28,6 +28,15 @@ body {
   margin: 0;
 }
 
+.content-area.auth-page {
+  padding: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
 /* Modern Footer Styles */
 .modern-footer {
   display: flex;
