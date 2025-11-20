@@ -1,10 +1,37 @@
+import { useAuth } from "../../contexts/AuthContext"
+
 const Account = () => {
+  const { user, signOut } = useAuth()
+
+  const getInitials = (email: string) => {
+    return email
+      .split("@")[0]
+      .split(".")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2)
+  }
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
+  }
+
+  const handleSignOut = async () => {
+    await signOut()
+  }
+
+  if (!user) {
+    return null
+  }
+
   return (
     <div className="page-container">
       <div className="account-header">
-        <div className="avatar">MA</div>
-        <h1 className="account-name">MaruApply User</h1>
-        <p className="account-email">user@maruapply.ai</p>
+        <div className="avatar">{getInitials(user.email || "")}</div>
+        <h1 className="account-name">{user.email?.split("@")[0] || "User"}</h1>
+        <p className="account-email">{user.email}</p>
       </div>
 
       <div className="card">
@@ -67,7 +94,7 @@ const Account = () => {
             <span>Support</span>
           </li>
 
-          <li className="menu-item">
+          <li className="menu-item" onClick={handleSignOut} style={{ cursor: "pointer" }}>
             <svg
               viewBox="0 0 24 24"
               fill="none"
@@ -89,13 +116,13 @@ const Account = () => {
         <h2 className="card-title">Account Details</h2>
         <div className="card-content">
           <p style={{ marginBottom: "12px" }}>
-            <strong>Member since:</strong> January 2024
+            <strong>Member since:</strong> {formatDate(user.created_at)}
           </p>
           <p style={{ marginBottom: "12px" }}>
-            <strong>Plan:</strong> Premium
+            <strong>User ID:</strong> {user.id.slice(0, 8)}...
           </p>
           <p>
-            <strong>Status:</strong> Active
+            <strong>Status:</strong> {user.email_confirmed_at ? "Verified" : "Pending Verification"}
           </p>
         </div>
       </div>
