@@ -65,6 +65,78 @@ const Profile = () => {
   const saveProfileData = async () => {
     if (!user) return
 
+    // Validate required fields
+    if (!profileData.firstName.trim()) {
+      setError("First Name is required")
+      return
+    }
+    if (!profileData.lastName.trim()) {
+      setError("Last Name is required")
+      return
+    }
+    if (!profileData.phoneNumber.trim()) {
+      setError("Phone Number is required")
+      return
+    }
+    if (!profileData.address.trim()) {
+      setError("Address is required")
+      return
+    }
+    if (!profileData.city.trim()) {
+      setError("City is required")
+      return
+    }
+    if (!profileData.state.trim()) {
+      setError("State is required")
+      return
+    }
+    if (!profileData.zipCode.trim()) {
+      setError("ZIP Code is required")
+      return
+    }
+    if (!profileData.country.trim()) {
+      setError("Country is required")
+      return
+    }
+    if (!profileData.birthday.trim()) {
+      setError("Birthday is required")
+      return
+    }
+    if (!profileData.linkedinLink.trim()) {
+      setError("LinkedIn Link is required")
+      return
+    }
+    if (!profileData.summary.trim()) {
+      setError("Professional Summary is required")
+      return
+    }
+    if (profileData.skills.length === 0) {
+      setError("At least one skill is required")
+      return
+    }
+    if (profileData.experience.length === 0) {
+      setError("At least one experience entry is required")
+      return
+    }
+    for (let i = 0; i < profileData.experience.length; i++) {
+      const exp = profileData.experience[i]
+      if (!exp.title.trim() || !exp.company.trim() || !exp.startDate.trim() || !exp.description.trim()) {
+        setError(`Experience ${i + 1}: Title, Company, Start Date, and Description are required`)
+        return
+      }
+    }
+    if (profileData.education.length === 0) {
+      setError("At least one education entry is required")
+      return
+    }
+    for (let i = 0; i < profileData.education.length; i++) {
+      const edu = profileData.education[i]
+      if (!edu.degree.trim() || !edu.school.trim() || !edu.field.trim() || !edu.startDate.trim()) {
+        setError(`Education ${i + 1}: Degree, School, Field of Study, and Start Date are required`)
+        return
+      }
+    }
+
     setIsSaving(true)
     setError(null)
     setSaveMessage(null)
@@ -355,6 +427,7 @@ const Profile = () => {
               type="text"
               value={profileData.firstName}
               onChange={(e) => setProfileData({ ...profileData, firstName: e.target.value })}
+              required
               style={{
                 width: "100%",
                 padding: "8px",
@@ -372,6 +445,7 @@ const Profile = () => {
               type="text"
               value={profileData.lastName}
               onChange={(e) => setProfileData({ ...profileData, lastName: e.target.value })}
+              required
               style={{
                 width: "100%",
                 padding: "8px",
@@ -384,12 +458,13 @@ const Profile = () => {
 
           <div>
             <label style={{ display: "block", marginBottom: "4px", fontSize: "14px", fontWeight: 500 }}>
-              Phone Number
+              Phone Number *
             </label>
             <input
               type="tel"
               value={profileData.phoneNumber}
               onChange={(e) => setProfileData({ ...profileData, phoneNumber: e.target.value })}
+              required
               style={{
                 width: "100%",
                 padding: "8px",
@@ -402,13 +477,14 @@ const Profile = () => {
 
           <div>
             <label style={{ display: "block", marginBottom: "4px", fontSize: "14px", fontWeight: 500 }}>
-              Address
+              Address *
             </label>
             <input
               type="text"
               value={profileData.address}
               onChange={(e) => setProfileData({ ...profileData, address: e.target.value })}
               placeholder="Street address"
+              required
               style={{
                 width: "100%",
                 padding: "8px",
@@ -423,6 +499,7 @@ const Profile = () => {
               value={profileData.city}
               onChange={(e) => setProfileData({ ...profileData, city: e.target.value })}
               placeholder="City"
+              required
               style={{
                 width: "100%",
                 padding: "8px",
@@ -437,6 +514,7 @@ const Profile = () => {
               value={profileData.state}
               onChange={(e) => setProfileData({ ...profileData, state: e.target.value })}
               placeholder="State"
+              required
               style={{
                 width: "100%",
                 padding: "8px",
@@ -451,6 +529,7 @@ const Profile = () => {
               value={profileData.zipCode}
               onChange={(e) => setProfileData({ ...profileData, zipCode: e.target.value })}
               placeholder="ZIP Code"
+              required
               style={{
                 width: "100%",
                 padding: "8px",
@@ -465,6 +544,7 @@ const Profile = () => {
               value={profileData.country}
               onChange={(e) => setProfileData({ ...profileData, country: e.target.value })}
               placeholder="Country"
+              required
               style={{
                 width: "100%",
                 padding: "8px",
@@ -477,12 +557,13 @@ const Profile = () => {
 
           <div>
             <label style={{ display: "block", marginBottom: "4px", fontSize: "14px", fontWeight: 500 }}>
-              Birthday
+              Birthday *
             </label>
             <input
               type="date"
               value={profileData.birthday}
               onChange={(e) => setProfileData({ ...profileData, birthday: e.target.value })}
+              required
               style={{
                 width: "100%",
                 padding: "8px",
@@ -494,13 +575,14 @@ const Profile = () => {
           </div>
           <div>
             <label style={{ display: "block", marginBottom: "4px", fontSize: "14px", fontWeight: 500 }}>
-              LinkedIn Link
+              LinkedIn Link *
             </label>
             <input
               type="url"
               value={profileData.linkedinLink}
               onChange={(e) => setProfileData({ ...profileData, linkedinLink: e.target.value })}
               placeholder="https://linkedin.com/in/..."
+              required
               style={{
                 width: "100%",
                 padding: "8px",
@@ -515,12 +597,13 @@ const Profile = () => {
 
       {/* Summary */}
       <div className="card">
-        <h2 className="card-title">Professional Summary</h2>
+        <h2 className="card-title">Professional Summary *</h2>
         <div className="card-content">
           <textarea
             value={profileData.summary}
             onChange={(e) => setProfileData({ ...profileData, summary: e.target.value })}
             placeholder="Write a brief professional summary..."
+            required
             style={{
               width: "100%",
               minHeight: "100px",
@@ -537,7 +620,7 @@ const Profile = () => {
 
       {/* Skills */}
       <div className="card">
-        <h2 className="card-title">Skills</h2>
+        <h2 className="card-title">Skills *</h2>
         <div className="card-content">
           <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
             <input
@@ -656,7 +739,8 @@ const Profile = () => {
                   type="text"
                   value={exp.title}
                   onChange={(e) => updateExperience(index, "title", e.target.value)}
-                  placeholder="Job Title"
+                  placeholder="Job Title *"
+                  required
                   style={{
                     width: "100%",
                     padding: "8px",
@@ -669,7 +753,8 @@ const Profile = () => {
                   type="text"
                   value={exp.company}
                   onChange={(e) => updateExperience(index, "company", e.target.value)}
-                  placeholder="Company"
+                  placeholder="Company *"
+                  required
                   style={{
                     width: "100%",
                     padding: "8px",
@@ -682,7 +767,8 @@ const Profile = () => {
                   type="month"
                   value={exp.startDate}
                   onChange={(e) => updateExperience(index, "startDate", e.target.value)}
-                  placeholder="Start Date"
+                  placeholder="Start Date *"
+                  required
                   style={{
                     width: "100%",
                     padding: "8px",
@@ -707,7 +793,8 @@ const Profile = () => {
                 <textarea
                   value={exp.description}
                   onChange={(e) => updateExperience(index, "description", e.target.value)}
-                  placeholder="Job description"
+                  placeholder="Job description *"
+                  required
                   style={{
                     width: "100%",
                     minHeight: "80px",
@@ -780,7 +867,8 @@ const Profile = () => {
                   type="text"
                   value={edu.degree}
                   onChange={(e) => updateEducation(index, "degree", e.target.value)}
-                  placeholder="Degree (e.g., Bachelor's, Master's)"
+                  placeholder="Degree (e.g., Bachelor's, Master's) *"
+                  required
                   style={{
                     width: "100%",
                     padding: "8px",
@@ -793,7 +881,8 @@ const Profile = () => {
                   type="text"
                   value={edu.school}
                   onChange={(e) => updateEducation(index, "school", e.target.value)}
-                  placeholder="School/University"
+                  placeholder="School/University *"
+                  required
                   style={{
                     width: "100%",
                     padding: "8px",
@@ -806,7 +895,8 @@ const Profile = () => {
                   type="text"
                   value={edu.field}
                   onChange={(e) => updateEducation(index, "field", e.target.value)}
-                  placeholder="Field of Study"
+                  placeholder="Field of Study *"
+                  required
                   style={{
                     width: "100%",
                     padding: "8px",
@@ -819,7 +909,8 @@ const Profile = () => {
                   type="month"
                   value={edu.startDate}
                   onChange={(e) => updateEducation(index, "startDate", e.target.value)}
-                  placeholder="Start Date"
+                  placeholder="Start Date *"
+                  required
                   style={{
                     width: "100%",
                     padding: "8px",
