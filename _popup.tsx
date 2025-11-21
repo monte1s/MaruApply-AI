@@ -13,6 +13,25 @@ function IndexPopupContent() {
   const [activeTab, setActiveTab] = useState<TabType>("home")
   const { user, loading } = useAuth()
 
+  const handleToggleSidePanel = async () => {
+    try {
+      // Get the browser window (not the popup window)
+      const browserWindow = await chrome.windows.getLastFocused()
+      console.log(browserWindow.id)
+      await chrome.sidePanel.setOptions({
+        enabled: true,
+        path: "sidepanel.html"
+      })
+
+      await chrome.sidePanel.open({ windowId: browserWindow.id })
+
+      window.close()
+    } catch (e) {
+      console.error(e)
+      alert(`Failed to open side panel: ${e.message}`)
+    }
+  }
+
   const renderContent = () => {
     switch (activeTab) {
       case "home":
@@ -50,7 +69,50 @@ function IndexPopupContent() {
 
   return (
     <div className="extension-container">
-      <div className="content-area">{renderContent()}</div>
+      <div className="content-area">
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "12px" }}>
+          <button
+            onClick={handleToggleSidePanel}
+            style={{
+              padding: "8px 16px",
+              borderRadius: "8px",
+              border: "1px solid #e5e7eb",
+              background: "#ffffff",
+              color: "#667eea",
+              cursor: "pointer",
+              fontSize: "12px",
+              fontWeight: "600",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              transition: "all 0.2s ease",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "#f3f4f6"
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "#ffffff"
+            }}
+            aria-label="Toggle Side Panel"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <line x1="9" y1="3" x2="9" y2="21" />
+            </svg>
+            <span>Side Panel</span>
+          </button>
+        </div>
+        {renderContent()}
+      </div>
 
       <footer className="modern-footer">
         <button
