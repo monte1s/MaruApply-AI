@@ -11,6 +11,7 @@ const Profile = () => {
   const [error, setError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true)
 
   const [profileData, setProfileData] = useState<ProfileData>({
     firstName: "",
@@ -32,13 +33,50 @@ const Profile = () => {
   const [resumeText, setResumeText] = useState("")
   const [newSkill, setNewSkill] = useState("")
 
-  // Load profile data on mount
+  // Load profile data automatically when user logs in
   useEffect(() => {
-    loadProfileData()
+    if (user) {
+      loadProfileData()
+    } else {
+      setIsLoadingProfile(false)
+    }
   }, [user])
 
+  // Helper function to normalize date from "yyyy-MM-DD" to "yyyy-MM"
+  const normalizeDateToMonth = (date: string | null): string => {
+    if (!date) return ""
+    // If date is already in "yyyy-MM" format, return as is
+    if (/^\d{4}-\d{2}$/.test(date)) return date
+    // If date is in "yyyy-MM-DD" format, extract year-month
+    if (/^\d{4}-\d{2}-\d{2}/.test(date)) return date.substring(0, 7)
+    return date
+  }
+
+  // Helper function to normalize profile data dates
+  const normalizeProfileDates = (data: ProfileData): ProfileData => {
+    return {
+      ...data,
+      experience: data.experience.map((exp) => ({
+        ...exp,
+        startDate: normalizeDateToMonth(exp.startDate),
+        endDate: exp.endDate ? normalizeDateToMonth(exp.endDate) : null,
+      })),
+      education: data.education.map((edu) => ({
+        ...edu,
+        startDate: normalizeDateToMonth(edu.startDate),
+        endDate: edu.endDate ? normalizeDateToMonth(edu.endDate) : null,
+      })),
+    }
+  }
+
   const loadProfileData = async () => {
-    if (!user) return
+    if (!user) {
+      setIsLoadingProfile(false)
+      return
+    }
+
+    setIsLoadingProfile(true)
+    setError(null)
 
     try {
       // Try to load from Supabase first, fallback to Chrome storage
@@ -48,17 +86,20 @@ const Profile = () => {
         .eq("user_id", user.id)
         .single()
 
-      if (!error && data) {
-        setProfileData(data.profile_data as ProfileData)
+      if (!error && data && data.profile_data) {
+        setProfileData(normalizeProfileDates(data.profile_data as ProfileData))
       } else {
         // Fallback to Chrome storage
         const stored = await chrome.storage.local.get(`profile_${user.id}`)
         if (stored[`profile_${user.id}`]) {
-          setProfileData(stored[`profile_${user.id}`])
+          setProfileData(normalizeProfileDates(stored[`profile_${user.id}`]))
         }
       }
     } catch (err) {
       console.error("Error loading profile:", err)
+      setError("Failed to load profile data. Please refresh the page.")
+    } finally {
+      setIsLoadingProfile(false)
     }
   }
 
@@ -219,7 +260,7 @@ const Profile = () => {
 
     try {
       const analysis = await analyzeResume(resumeText, apiKey)
-      setProfileData(analysis)
+      setProfileData(normalizeProfileDates(analysis))
       setResumeText("") // Clear the text area
       setSaveMessage("Resume analyzed successfully! Please review and save.")
       setTimeout(() => setSaveMessage(null), 5000)
@@ -303,6 +344,19 @@ const Profile = () => {
       ...profileData,
       education: profileData.education.filter((_, i) => i !== index),
     })
+  }
+
+  // Show loading state while profile is being loaded
+  if (isLoadingProfile) {
+    return (
+      <div className="page-container">
+        <h1 className="page-title">Profile</h1>
+        <p className="page-subtitle">Loading your profile information...</p>
+        <div className="card" style={{ textAlign: "center", padding: "40px" }}>
+          <p style={{ color: "#6b7280", margin: 0 }}>Loading profile data...</p>
+        </div>
+      </div>
+    )
   }
 
   return (

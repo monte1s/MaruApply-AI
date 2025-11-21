@@ -48,8 +48,8 @@ Required fields:
 - linkedinLink: LinkedIn profile URL
 - summary: Professional summary or objective
 - skills: Array of skills (as strings)
-- experience: Array of work experience objects with: title, company, startDate, endDate (null if current), description
-- education: Array of education objects with: degree, school, field, startDate, endDate (null if current)
+- experience: Array of work experience objects with: title, company, startDate (format: YYYY-MM), endDate (format: YYYY-MM, null if current), description
+- education: Array of education objects with: degree, school, field, startDate (format: YYYY-MM), endDate (format: YYYY-MM, null if current)
 
 Return ONLY valid JSON, no additional text or markdown formatting.
 

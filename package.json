@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "plasmo dev",
     "build": "plasmo build",
-    "package": "plasmo package"
+    "package": "plasmo package",
+    "migrate": "node scripts/migrate.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.84.0",
