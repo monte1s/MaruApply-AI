@@ -50,3 +50,62 @@ CREATE POLICY "Users can update own profile"
 CREATE POLICY "Users can delete own profile"
   ON profiles FOR DELETE
   USING (auth.uid() = user_id);
+
+-- ============================================
+-- STORAGE SETUP FOR RESUME PDFs
+-- ============================================
+-- IMPORTANT: You MUST create the storage bucket MANUALLY before running the policies below!
+-- Storage buckets cannot be created via SQL - they must be created in the Supabase dashboard.
+--
+-- STEP 1: Create the bucket manually:
+--   1. Go to Storage in your Supabase dashboard (left sidebar)
+--   2. Click "Create a new bucket" button
+--   3. Name it exactly: "resumes" (lowercase, no spaces)
+--   4. Choose PUBLIC or PRIVATE:
+--      - PUBLIC: Files are accessible via public URLs (simpler, but less secure)
+--      - PRIVATE: Files require authentication (more secure, but requires signed URLs for access)
+--   5. Click "Create bucket"
+--
+-- STEP 2: After the bucket is created, run the following SQL policies:
+-- (The policies below will fail if the bucket doesn't exist yet!)
+--
+-- Allow authenticated users to upload their own resumes
+CREATE POLICY "Users can upload own resume"
+  ON storage.objects FOR INSERT
+  WITH CHECK (
+    bucket_id = 'resumes' AND
+    auth.role() = 'authenticated' AND
+    (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+-- Allow users to view their own resumes
+CREATE POLICY "Users can view own resume"
+  ON storage.objects FOR SELECT
+  USING (
+    bucket_id = 'resumes' AND
+    auth.role() = 'authenticated' AND
+    (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+-- Allow users to update their own resumes
+CREATE POLICY "Users can update own resume"
+  ON storage.objects FOR UPDATE
+  USING (
+    bucket_id = 'resumes' AND
+    auth.role() = 'authenticated' AND
+    (storage.foldername(name))[1] = auth.uid()::text
+  )
+  WITH CHECK (
+    bucket_id = 'resumes' AND
+    auth.role() = 'authenticated' AND
+    (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+-- Allow users to delete their own resumes
+CREATE POLICY "Users can delete own resume"
+  ON storage.objects FOR DELETE
+  USING (
+    bucket_id = 'resumes' AND
+    auth.role() = 'authenticated' AND
+    (storage.foldername(name))[1] = auth.uid()::text
+  );

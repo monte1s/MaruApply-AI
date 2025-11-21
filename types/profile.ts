@@ -15,6 +15,8 @@ export interface ProfileData {
   skills: string[]
   experience: Experience[]
   education: Education[]
+  resumeUrl?: string // URL to the uploaded resume PDF in Supabase Storage (public URL or signed URL)
+  resumePath?: string // File path in Supabase Storage (for regenerating signed URLs if needed)
 }
 
 export interface Experience {

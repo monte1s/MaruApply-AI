@@ -28,7 +28,10 @@ const Profile = () => {
     skills: [],
     experience: [],
     education: [],
+    resumeUrl: "",
   })
+
+  console.log(profileData.resumeUrl)
 
   const [resumeText, setResumeText] = useState("")
   const [newSkill, setNewSkill] = useState("")
@@ -218,25 +221,71 @@ const Profile = () => {
       return
     }
 
+    if (!user) {
+      setError("You must be logged in to upload a resume")
+      return
+    }
+
     setIsAnalyzing(true)
     setError(null)
 
     try {
+      // Upload PDF to Supabase Storage
+      const fileExt = file.name.split(".").pop()
+      const fileName = `${Date.now()}.${fileExt}`
+      const filePath = `${user.id}/${fileName}`
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("resumes")
+        .upload(filePath, file, {
+          cacheControl: "3600",
+          upsert: false, // Don't overwrite existing files
+        })
+
+      if (uploadError) {
+        throw new Error(`Failed to upload resume: ${uploadError.message}`)
+      }
+
+      // Get URL for the uploaded file
+      // Try to get signed URL first (for private buckets), fallback to public URL (for public buckets)
+      let resumeUrl: string
+      const { data: signedUrlData, error: signedError } = await supabase.storage
+        .from("resumes")
+        .createSignedUrl(filePath, 31536000) // 1 year expiration (in seconds)
+      
+      if (signedUrlData?.signedUrl && !signedError) {
+        // Private bucket - use signed URL
+        resumeUrl = signedUrlData.signedUrl
+      } else {
+        // Public bucket - use public URL
+        const { data: urlData } = supabase.storage.from("resumes").getPublicUrl(filePath)
+        resumeUrl = urlData.publicUrl
+      }
+
+      // Update profile data with resume URL and path
+      setProfileData((prev) => ({
+        ...prev,
+        resumeUrl: resumeUrl,
+        resumePath: filePath, // Store path for regenerating signed URLs if needed
+      }))
+
+      // Extract text from PDF for analysis
       const { extractTextFromPDF } = await import("../../lib/openai")
       const extractedText = await extractTextFromPDF(file)
       
       if (extractedText.trim()) {
         setResumeText(extractedText)
-        setSaveMessage("PDF text extracted! Click 'Analyze Resume' to parse the information.")
+        setSaveMessage("Resume uploaded and PDF text extracted! Click 'Analyze Resume' to parse the information.")
         setTimeout(() => setSaveMessage(null), 5000)
       } else {
-        setError("Could not extract text from PDF. Please try manual input.")
+        setSaveMessage("Resume uploaded successfully! However, text extraction failed. Please try manual input.")
+        setTimeout(() => setSaveMessage(null), 5000)
       }
     } catch (err) {
       setError(
         err instanceof Error
           ? err.message
-          : "Failed to extract text from PDF. Please try manual input or ensure your PDF contains selectable text."
+          : "Failed to upload resume. Please try again."
       )
     } finally {
       setIsAnalyzing(false)
@@ -346,6 +395,24 @@ const Profile = () => {
     })
   }
 
+  // Helper function to extract filename from URL
+  const getResumeFileName = (url: string): string => {
+    try {
+      const urlObj = new URL(url)
+      const pathParts = urlObj.pathname.split("/")
+      const fileName = pathParts[pathParts.length - 1]
+      // If filename is just a timestamp, return a more friendly name
+      if (/^\d+\.pdf$/i.test(fileName)) {
+        return "resume.pdf"
+      }
+      return fileName || "resume.pdf"
+    } catch {
+      // Fallback if URL parsing fails
+      const parts = url.split("/")
+      return parts[parts.length - 1]?.split("?")[0] || "resume.pdf"
+    }
+  }
+
   // Show loading state while profile is being loaded
   if (isLoadingProfile) {
     return (
@@ -412,6 +479,55 @@ const Profile = () => {
           </button>
         </div>
       </div>
+
+      {/* Current Resume Display */}
+      {profileData.resumeUrl && (
+        <div className="card" style={{ background: "#f0f9ff", borderColor: "#0ea5e9" }}>
+          <h2 className="card-title" style={{ marginBottom: "12px" }}>Your Resume</h2>
+          <div className="card-content" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+            <div style={{ flex: 1 }}>
+              <p style={{ margin: 0, fontSize: "14px", color: "#374151", fontWeight: 500 }}>
+                {getResumeFileName(profileData.resumeUrl)}
+              </p>
+              <a
+                href={profileData.resumeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  fontSize: "12px",
+                  color: "#0ea5e9",
+                  textDecoration: "none",
+                  marginTop: "4px",
+                  display: "inline-block",
+                }}
+                onMouseOver={(e) => (e.currentTarget.style.textDecoration = "underline")}
+                onMouseOut={(e) => (e.currentTarget.style.textDecoration = "none")}
+              >
+                View/Download Resume →
+              </a>
+            </div>
+            <button
+              onClick={() => {
+                setProfileData((prev) => ({ ...prev, resumeUrl: "", resumePath: "" }))
+                setSaveMessage("Resume removed. Don't forget to save your profile.")
+                setTimeout(() => setSaveMessage(null), 3000)
+              }}
+              style={{
+                padding: "6px 12px",
+                borderRadius: "6px",
+                border: "1px solid #ef4444",
+                background: "white",
+                color: "#ef4444",
+                cursor: "pointer",
+                fontSize: "12px",
+                fontWeight: 500,
+              }}
+            >
+              Remove
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Upload/Text Input Section */}
       {inputMode === "upload" && (
