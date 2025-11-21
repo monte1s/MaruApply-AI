@@ -11,6 +11,7 @@ const Profile = () => {
   const [error, setError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true)
 
   const [profileData, setProfileData] = useState<ProfileData>({
     firstName: "",
@@ -27,18 +28,58 @@ const Profile = () => {
     skills: [],
     experience: [],
     education: [],
+    resumeUrl: "",
   })
+
+  console.log(profileData.resumeUrl)
 
   const [resumeText, setResumeText] = useState("")
   const [newSkill, setNewSkill] = useState("")
 
-  // Load profile data on mount
+  // Load profile data automatically when user logs in
   useEffect(() => {
-    loadProfileData()
+    if (user) {
+      loadProfileData()
+    } else {
+      setIsLoadingProfile(false)
+    }
   }, [user])
 
+  // Helper function to normalize date from "yyyy-MM-DD" to "yyyy-MM"
+  const normalizeDateToMonth = (date: string | null): string => {
+    if (!date) return ""
+    // If date is already in "yyyy-MM" format, return as is
+    if (/^\d{4}-\d{2}$/.test(date)) return date
+    // If date is in "yyyy-MM-DD" format, extract year-month
+    if (/^\d{4}-\d{2}-\d{2}/.test(date)) return date.substring(0, 7)
+    return date
+  }
+
+  // Helper function to normalize profile data dates
+  const normalizeProfileDates = (data: ProfileData): ProfileData => {
+    return {
+      ...data,
+      experience: data.experience.map((exp) => ({
+        ...exp,
+        startDate: normalizeDateToMonth(exp.startDate),
+        endDate: exp.endDate ? normalizeDateToMonth(exp.endDate) : null,
+      })),
+      education: data.education.map((edu) => ({
+        ...edu,
+        startDate: normalizeDateToMonth(edu.startDate),
+        endDate: edu.endDate ? normalizeDateToMonth(edu.endDate) : null,
+      })),
+    }
+  }
+
   const loadProfileData = async () => {
-    if (!user) return
+    if (!user) {
+      setIsLoadingProfile(false)
+      return
+    }
+
+    setIsLoadingProfile(true)
+    setError(null)
 
     try {
       // Try to load from Supabase first, fallback to Chrome storage
@@ -48,17 +89,20 @@ const Profile = () => {
         .eq("user_id", user.id)
         .single()
 
-      if (!error && data) {
-        setProfileData(data.profile_data as ProfileData)
+      if (!error && data && data.profile_data) {
+        setProfileData(normalizeProfileDates(data.profile_data as ProfileData))
       } else {
         // Fallback to Chrome storage
         const stored = await chrome.storage.local.get(`profile_${user.id}`)
         if (stored[`profile_${user.id}`]) {
-          setProfileData(stored[`profile_${user.id}`])
+          setProfileData(normalizeProfileDates(stored[`profile_${user.id}`]))
         }
       }
     } catch (err) {
       console.error("Error loading profile:", err)
+      setError("Failed to load profile data. Please refresh the page.")
+    } finally {
+      setIsLoadingProfile(false)
     }
   }
 
@@ -177,25 +221,71 @@ const Profile = () => {
       return
     }
 
+    if (!user) {
+      setError("You must be logged in to upload a resume")
+      return
+    }
+
     setIsAnalyzing(true)
     setError(null)
 
     try {
+      // Upload PDF to Supabase Storage
+      const fileExt = file.name.split(".").pop()
+      const fileName = `${Date.now()}.${fileExt}`
+      const filePath = `${user.id}/${fileName}`
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("resumes")
+        .upload(filePath, file, {
+          cacheControl: "3600",
+          upsert: false, // Don't overwrite existing files
+        })
+
+      if (uploadError) {
+        throw new Error(`Failed to upload resume: ${uploadError.message}`)
+      }
+
+      // Get URL for the uploaded file
+      // Try to get signed URL first (for private buckets), fallback to public URL (for public buckets)
+      let resumeUrl: string
+      const { data: signedUrlData, error: signedError } = await supabase.storage
+        .from("resumes")
+        .createSignedUrl(filePath, 31536000) // 1 year expiration (in seconds)
+      
+      if (signedUrlData?.signedUrl && !signedError) {
+        // Private bucket - use signed URL
+        resumeUrl = signedUrlData.signedUrl
+      } else {
+        // Public bucket - use public URL
+        const { data: urlData } = supabase.storage.from("resumes").getPublicUrl(filePath)
+        resumeUrl = urlData.publicUrl
+      }
+
+      // Update profile data with resume URL and path
+      setProfileData((prev) => ({
+        ...prev,
+        resumeUrl: resumeUrl,
+        resumePath: filePath, // Store path for regenerating signed URLs if needed
+      }))
+
+      // Extract text from PDF for analysis
       const { extractTextFromPDF } = await import("../../lib/openai")
       const extractedText = await extractTextFromPDF(file)
       
       if (extractedText.trim()) {
         setResumeText(extractedText)
-        setSaveMessage("PDF text extracted! Click 'Analyze Resume' to parse the information.")
+        setSaveMessage("Resume uploaded and PDF text extracted! Click 'Analyze Resume' to parse the information.")
         setTimeout(() => setSaveMessage(null), 5000)
       } else {
-        setError("Could not extract text from PDF. Please try manual input.")
+        setSaveMessage("Resume uploaded successfully! However, text extraction failed. Please try manual input.")
+        setTimeout(() => setSaveMessage(null), 5000)
       }
     } catch (err) {
       setError(
         err instanceof Error
           ? err.message
-          : "Failed to extract text from PDF. Please try manual input or ensure your PDF contains selectable text."
+          : "Failed to upload resume. Please try again."
       )
     } finally {
       setIsAnalyzing(false)
@@ -219,7 +309,7 @@ const Profile = () => {
 
     try {
       const analysis = await analyzeResume(resumeText, apiKey)
-      setProfileData(analysis)
+      setProfileData(normalizeProfileDates(analysis))
       setResumeText("") // Clear the text area
       setSaveMessage("Resume analyzed successfully! Please review and save.")
       setTimeout(() => setSaveMessage(null), 5000)
@@ -305,6 +395,37 @@ const Profile = () => {
     })
   }
 
+  // Helper function to extract filename from URL
+  const getResumeFileName = (url: string): string => {
+    try {
+      const urlObj = new URL(url)
+      const pathParts = urlObj.pathname.split("/")
+      const fileName = pathParts[pathParts.length - 1]
+      // If filename is just a timestamp, return a more friendly name
+      if (/^\d+\.pdf$/i.test(fileName)) {
+        return "resume.pdf"
+      }
+      return fileName || "resume.pdf"
+    } catch {
+      // Fallback if URL parsing fails
+      const parts = url.split("/")
+      return parts[parts.length - 1]?.split("?")[0] || "resume.pdf"
+    }
+  }
+
+  // Show loading state while profile is being loaded
+  if (isLoadingProfile) {
+    return (
+      <div className="page-container">
+        <h1 className="page-title">Profile</h1>
+        <p className="page-subtitle">Loading your profile information...</p>
+        <div className="card" style={{ textAlign: "center", padding: "40px" }}>
+          <p style={{ color: "#6b7280", margin: 0 }}>Loading profile data...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="page-container">
       <h1 className="page-title">Profile</h1>
@@ -358,6 +479,55 @@ const Profile = () => {
           </button>
         </div>
       </div>
+
+      {/* Current Resume Display */}
+      {profileData.resumeUrl && (
+        <div className="card" style={{ background: "#f0f9ff", borderColor: "#0ea5e9" }}>
+          <h2 className="card-title" style={{ marginBottom: "12px" }}>Your Resume</h2>
+          <div className="card-content" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+            <div style={{ flex: 1 }}>
+              <p style={{ margin: 0, fontSize: "14px", color: "#374151", fontWeight: 500 }}>
+                {getResumeFileName(profileData.resumeUrl)}
+              </p>
+              <a
+                href={profileData.resumeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  fontSize: "12px",
+                  color: "#0ea5e9",
+                  textDecoration: "none",
+                  marginTop: "4px",
+                  display: "inline-block",
+                }}
+                onMouseOver={(e) => (e.currentTarget.style.textDecoration = "underline")}
+                onMouseOut={(e) => (e.currentTarget.style.textDecoration = "none")}
+              >
+                View/Download Resume →
+              </a>
+            </div>
+            <button
+              onClick={() => {
+                setProfileData((prev) => ({ ...prev, resumeUrl: "", resumePath: "" }))
+                setSaveMessage("Resume removed. Don't forget to save your profile.")
+                setTimeout(() => setSaveMessage(null), 3000)
+              }}
+              style={{
+                padding: "6px 12px",
+                borderRadius: "6px",
+                border: "1px solid #ef4444",
+                background: "white",
+                color: "#ef4444",
+                cursor: "pointer",
+                fontSize: "12px",
+                fontWeight: 500,
+              }}
+            >
+              Remove
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Upload/Text Input Section */}
       {inputMode === "upload" && (
